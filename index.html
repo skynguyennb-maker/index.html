@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò chơi Luyện tập Thông tin Du lịch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #f0fdf4;
+            user-select: none;
+        }
+
+        .card-shadow {
+            box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.08);
+        }
+
+        .draggable-item {
+            cursor: grab;
+            transition: all 0.2s;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.02);
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            min-height: 80px;
+            transition: all 0.3s;
+            background: #ffffff;
+        }
+        .drop-zone.hover {
+            border-color: #22c55e;
+            background-color: #f0fdf4;
+        }
+        .drop-zone.filled {
+            border-style: solid;
+            border-color: #86efac;
+            background-color: #f7fee7;
+        }
+
+        .quiz-option {
+            transition: all 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+        .quiz-option:hover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .quiz-option.selected {
+            border-color: #3b82f6;
+            background-color: #dbeafe;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Tiêu đề -->
+        <div class="text-center mb-8 bg-white p-6 rounded-[2rem] card-shadow border-b-4 border-emerald-400">
+            <h1 class="text-3xl sm:text-4xl font-black text-emerald-600 mb-2">🎒 Luyện Tập Thông Tin Du Lịch</h1>
+            <p class="text-slate-500 font-bold text-sm sm:text-base">Hãy hoàn thành các câu hỏi dưới đây nhé!</p>
+        </div>
+
+        <!-- CÂU 1: GHÉP NỐI -->
+        <div class="bg-white p-6 sm:p-8 rounded-[2rem] card-shadow mb-8 border-2 border-emerald-100">
+            <div class="flex items-start gap-3 mb-6">
+                <span class="bg-emerald-500 text-white font-black px-4 py-2 rounded-2xl text-lg shrink-0">Câu 1</span>
+                <h2 class="text-xl font-bold text-slate-700 leading-snug">Hãy ghép tình huống ở Cột A với hậu quả tương ứng ở Cột B khi không tìm hiểu thông tin trước chuyến đi:</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Danh sách Cột A (Vùng thả - Drop Zones) -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-emerald-600 uppercase text-xs tracking-wider">📦 Cột A (Tình huống)</h3>
+                    <div id="targets-container" class="space-y-3">
+                        <!-- Tạo động bằng JS -->
+                    </div>
+                </div>
+
+                <!-- Danh sách Cột B (Các thẻ kéo - Draggable Sources) -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-blue-600 uppercase text-xs tracking-wider">🎯 Cột B (Hậu quả / Kết quả - Kéo thả vào Cột A)</h3>
+                    <div id="sources-container" class="space-y-3 min-h-[300px]">
+                        <!-- Tạo động bằng JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CÂU 2: TRẮC NGHIỆM -->
+        <div class="bg-white p-6 sm:p-8 rounded-[2rem] card-shadow mb-8 border-2 border-blue-100">
+            <div class="flex items-center gap-3 mb-6">
+                <span class="bg-blue-500 text-white font-black px-4 py-2 rounded-2xl text-lg shrink-0">Câu 2</span>
+                <h2 class="text-xl font-bold text-slate-700">Trong các phát biểu sau, phát biểu nào <span class="text-red-500 underline">SAI</span>?</h2>
+            </div>
+
+            <div id="quiz-options-container" class="space-y-3">
+                <!-- Các lựa chọn trắc nghiệm được tạo động/xáo trộn qua JS để học sinh dễ tương tác -->
+            </div>
+        </div>
+
+        <!-- Nút Nộp Bài -->
+        <div class="text-center mb-12">
+            <button id="submit-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 px-12 rounded-full shadow-[0_6px_0_#047857] transition-all active:translate-y-1 active:shadow-none text-xl uppercase tracking-wider">
+                Nộp Bài Ngay 🚀
+            </button>
+        </div>
+
+        <!-- Kết Quả & Thông Báo -->
+        <div id="result-area" class="hidden bg-white border-4 border-emerald-300 p-8 rounded-[3rem] card-shadow text-center mb-16">
+            <div id="result-emoji" class="text-6xl mb-3">🎉</div>
+            <h3 id="result-title" class="text-3xl font-black text-emerald-600 mb-2">Chúc mừng bạn đã hoàn thành</h3>
+            <p id="result-desc" class="text-xl text-slate-600 font-bold mb-6">Điểm số của bạn: <span id="score-text" class="text-orange-500 font-black">0 / 2</span></p>
+            <div id="detail-feedback" class="text-left bg-slate-50 p-6 rounded-2xl max-w-xl mx-auto mb-6 text-slate-700 space-y-2"></div>
+            <button id="retry-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-black py-4 px-10 rounded-full shadow-[0_6px_0_#1d4ed8] transition-all uppercase tracking-wider">
+                Làm Lại Lượt Mới 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const matchData = [
+            { id: '1', text: 'Bạn Khoa đi Đà Lạt (mát mẻ, tối và đêm khá lạnh) nhưng chỉ mang quần áo mùa hè.', targetText: 'Bị lạnh về đêm, không có áo ấm để ra ngoài tham quan.' },
+            { id: '2', text: 'Bạn Minh đi Úc (vào tháng 6 - 7 là mùa đông) nhưng chỉ mang đồ bơi và áo cối.', targetText: 'Không thể tham gia các hoạt động vì thời tiết mùa đông rất lạnh.' },
+            { id: '3', text: 'Bạn An tìm hiểu trước: Nha Trang nắng nóng nên mang theo kem chống nắng, đồ bơi.', targetText: 'Chuyến đi diễn ra thuận lợi, vui vẻ và thành công.' }
+        ];
+
+        const quizData = [
+            { id: 'opt1', text: 'Thiếu thông tin sẽ khiến em gặp khó khăn trong giải quyết vấn đề.', correct: false },
+            { id: 'opt2', text: 'Có đầy đủ thông tin sẽ giúp em giải quyết vấn đề tốt hơn.', correct: false },
+            { id: 'opt3', text: 'Thu thập thông tin là việc không cần thiết vì có thể tự đoán mọi việc.', correct: true },
+            { id: 'opt4', text: 'Cần tìm hiểu thông tin thời tiết trước khi đi du lịch xa.', correct: false }
+        ];
+
+        let selectedQuizOptionId = null;
+        let draggedItem = null;
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initGame() {
+            selectedQuizOptionId = null;
+            document.getElementById('result-area').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const sourcesContainer = document.getElementById('sources-container');
+            const targetsContainer = document.getElementById('targets-container');
+            const quizContainer = document.getElementById('quiz-options-container');
+
+            sourcesContainer.innerHTML = '';
+            targetsContainer.innerHTML = '';
+            quizContainer.innerHTML = '';
+
+            // Xáo trộn thứ tự Cột B (Sources)
+            const shuffledSources = shuffleArray(matchData);
+            shuffledSources.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'draggable-item bg-blue-500 text-white p-4 rounded-2xl font-bold shadow-md text-sm sm:text-base';
+                div.draggable = true;
+                div.dataset.id = item.id;
+                div.innerText = item.targetText;
+
+                div.addEventListener('dragstart', e => { draggedItem = item.id; });
+                sourcesContainer.appendChild(div);
+            });
+
+            // Xáo trộn thứ tự Cột A (Targets)
+            const shuffledTargets = shuffleArray(matchData);
+            shuffledTargets.forEach(target => {
+                const zone = document.createElement('div');
+                zone.className = 'drop-zone p-4 rounded-2xl flex flex-col justify-center';
+                zone.dataset.targetId = target.id;
+                zone.innerHTML = `
+                    <p class="text-xs font-bold text-slate-500 mb-1">Tình huống: ${target.text}</p>
+                    <div class="drop-content text-slate-400 text-sm italic font-bold">👉 Kéo hậu quả ở Cột B vào đây</div>
+                `;
+
+                zone.addEventListener('dragover', e => e.preventDefault());
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (!draggedItem) return;
+                    
+                    document.querySelectorAll('.drop-zone').forEach(z => {
+                        if (z.dataset.assigned === draggedItem) {
+                            z.dataset.assigned = '';
+                            z.classList.remove('filled');
+                            z.querySelector('.drop-content').className = 'drop-content text-slate-400 text-sm italic font-bold';
+                            z.querySelector('.drop-content').innerText = '👉 Kéo hậu quả ở Cột B vào đây';
+                        }
+                    });
+
+                    this.dataset.assigned = draggedItem;
+                    this.classList.add('filled');
+                    const matchedObj = matchData.find(m => m.id === draggedItem);
+                    const contentDiv = this.querySelector('.drop-content');
+                    contentDiv.className = 'drop-content text-blue-900 text-sm font-bold';
+                    contentDiv.innerText = `${matchedObj.targetText}`;
+                });
+
+                targetsContainer.appendChild(zone);
+            });
+
+            // Xáo trộn thứ tự các lựa chọn trắc nghiệm (Câu 2)
+            const shuffledQuiz = shuffleArray(quizData);
+            shuffledQuiz.forEach((q, idx) => {
+                const optDiv = document.createElement('div');
+                optDiv.className = 'quiz-option p-4 rounded-2xl cursor-pointer font-medium text-slate-700 flex items-center gap-3';
+                optDiv.dataset.id = q.id;
+                optDiv.innerHTML = `
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 shrink-0">${idx + 1}</span>
+                    <span>${q.text}</span>
+                `;
+
+                optDiv.onclick = function() {
+                    document.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedQuizOptionId = q.id;
+                };
+
+                quizContainer.appendChild(optDiv);
+            });
+        }
+
+        document.getElementById('submit-btn').onclick = function() {
+            let score = 0;
+            let feedbackHTML = '';
+
+            let q1Correct = true;
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const tId = zone.dataset.targetId;
+                const assignedId = zone.dataset.assigned;
+                if (tId !== assignedId) {
+                    q1Correct = false;
+                }
+            });
+
+            if (q1Correct) {
+                score += 1;
+                feedbackHTML += `<p class="text-emerald-600 font-bold">Câu 1: Ghép nối chính xác các tình huống và hậu quả!</p>`;
+            } else {
+                feedbackHTML += `<p class="text-red-500 font-bold">Câu 1: Chưa chính xác hoàn toàn. Hãy kiểm tra lại cách ghép cặp.</p>`;
+            }
+
+            if (selectedQuizOptionId === 'opt3') {
+                score += 1;
+                feedbackHTML += `<p class="text-emerald-600 font-bold">Câu 2: Trắc nghiệm chính xác (Phát biểu sai: Thu thập thông tin là việc không cần thiết vì có thể tự đoán mọi việc)</p>`;
+            } else {
+                feedbackHTML += `<p class="text-red-500 font-bold">Câu 2: Chưa đúng. (Giải thích: Muốn đưa ra quyết định đúng đắn bắt buộc phải có thông tin)</p>`;
+            }
+
+            document.getElementById('score-text').innerText = `${score} / 2`;
+            document.getElementById('detail-feedback').innerHTML = feedbackHTML;
+            
+            const resultArea = document.getElementById('result-area');
+            resultArea.classList.remove('hidden');
+            resultArea.scrollIntoView({ behavior: 'smooth' });
+
+            if (score === 2) {
+                document.getElementById('result-title').innerText = "Chúc mừng bạn đã hoàn thành";
+                document.getElementById('result-emoji').innerText = "🎉";
+                createConfetti();
+            } else {
+                document.getElementById('result-title').innerText = "Bạn hãy cố gắng hơn nhé";
+                document.getElementById('result-emoji').innerText = "💪";
+            }
+        };
+
+        function createConfetti() {
+            const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7'];
+            for (let i = 0; i < 80; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.top = '-10px';
+                c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                c.style.animation = `fall ${Math.random() * 3 + 2}s linear forwards`;
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5000);
+            }
+        }
+
+        document.getElementById('retry-btn').onclick = initGame;
+        window.onload = initGame;
+    </script>
+</body>
+</html>
